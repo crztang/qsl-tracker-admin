@@ -13,6 +13,7 @@ public class QslConfirmLog {
 
     @TableId
     private Long id;
+    private Long userId;
     private Long qslCardId;
     private String trackingNo;
     private String confirmIp;

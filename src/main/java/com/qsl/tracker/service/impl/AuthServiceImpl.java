@@ -5,13 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qsl.tracker.common.BusinessException;
 import com.qsl.tracker.common.PasswordUtil;
 import com.qsl.tracker.common.WebUtil;
-import com.qsl.tracker.domain.AdminLoginLog;
-import com.qsl.tracker.domain.AdminUser;
+import com.qsl.tracker.domain.UserLoginLog;
+import com.qsl.tracker.domain.User;
 import com.qsl.tracker.dto.LoginRequest;
 import com.qsl.tracker.dto.LoginResponse;
-import com.qsl.tracker.service.AdminAuthService;
-import com.qsl.tracker.service.AdminLoginLogService;
-import com.qsl.tracker.service.AdminUserService;
+import com.qsl.tracker.service.AuthService;
+import com.qsl.tracker.service.UserLoginLogService;
+import com.qsl.tracker.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class AdminAuthServiceImpl implements AdminAuthService {
+public class AuthServiceImpl implements AuthService {
 
     private static final int MAX_FAILED_COUNT = 5;
     private static final int LOCK_MINUTES = 15;
 
-    private final AdminUserService adminUserService;
-    private final AdminLoginLogService adminLoginLogService;
+    private final UserService userService;
+    private final UserLoginLogService userLoginLogService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -34,8 +34,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         String username = request.getUsername().trim();
         String ip = WebUtil.clientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
-        AdminUser user = adminUserService.getOne(new LambdaQueryWrapper<AdminUser>()
-                .eq(AdminUser::getUsername, username)
+        User user = userService.getOne(new LambdaQueryWrapper<User>()
+                .eq(User::getUsername, username)
                 .last("limit 1"));
         if (user == null) {
             saveLoginLog(null, username, ip, userAgent, false, "账号不存在");
@@ -57,7 +57,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             if (failedCount >= MAX_FAILED_COUNT) {
                 user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_MINUTES));
             }
-            adminUserService.updateById(user);
+            userService.updateById(user);
             saveLoginLog(user.getId(), username, ip, userAgent, false, "密码错误");
             throw new BusinessException("账号或密码错误");
         }
@@ -67,7 +67,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         user.setLockedUntil(null);
         user.setLastLoginAt(LocalDateTime.now());
         user.setLastLoginIp(ip);
-        adminUserService.updateById(user);
+        userService.updateById(user);
         saveLoginLog(user.getId(), username, ip, userAgent, true, null);
 
         StpUtil.login(user.getId());
@@ -83,13 +83,13 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     }
 
     private void saveLoginLog(Long userId, String username, String ip, String userAgent, boolean success, String failReason) {
-        AdminLoginLog log = new AdminLoginLog();
-        log.setAdminUserId(userId);
+        UserLoginLog log = new UserLoginLog();
+        log.setUserId(userId);
         log.setUsername(username);
         log.setLoginIp(ip);
         log.setUserAgent(userAgent);
         log.setSuccess(success);
         log.setFailReason(failReason);
-        adminLoginLogService.save(log);
+        userLoginLogService.save(log);
     }
 }

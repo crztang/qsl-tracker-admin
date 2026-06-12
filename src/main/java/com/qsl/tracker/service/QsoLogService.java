@@ -13,4 +13,8 @@ public interface QsoLogService extends IService<QsoLog> {
     QsoLog update(Long id, QsoLogRequest request);
 
     PageResponse<QsoLog> page(QsoLogQuery query);
+
+    QsoLog detail(Long id);
+
+    void delete(Long id);
 }

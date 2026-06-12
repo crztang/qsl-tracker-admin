@@ -16,6 +16,10 @@ public interface QslCardService extends IService<QslCard> {
 
     PageResponse<QslCardVO> page(QslCardQuery query);
 
+    QslCard detail(Long id);
+
+    void delete(Long id);
+
     QslPublicInfoResponse publicInfo(String trackingNo);
 
     void confirm(String trackingNo, String token, String ip, String userAgent);

@@ -10,6 +10,7 @@ public class QslCard {
 
     @TableId
     private Long id;
+    private Long userId;
     private String cardType;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long qsoLogId;

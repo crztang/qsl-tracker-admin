@@ -1,7 +1,5 @@
 package com.qsl.tracker.dto;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,7 +17,7 @@ public class PrintTemplateRequest {
     @NotNull
     @Pattern(regexp = "[12]")
     private String templateType;
-    private Long backgroundFileId;
+    private String backgroundFileKey;
     @NotNull
     private JsonNode configJson;
     private Boolean enabled = true;

@@ -13,6 +13,8 @@ public class StorageFile {
 
     @TableId
     private Long id;
+    private Long userId;
+    private String fileKey;
     private String originalName;
     private String storageName;
     private String relativePath;

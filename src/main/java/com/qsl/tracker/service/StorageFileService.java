@@ -10,7 +10,9 @@ public interface StorageFileService extends IService<StorageFile> {
 
     StorageFileResponse uploadImage(MultipartFile file);
 
-    StorageFile getAvailableFile(Long id);
+    StorageFile getAccessibleFile(String fileKey);
+
+    StorageFile getFileForOwner(String fileKey, Long ownerId);
 
     Path resolveFile(StorageFile file);
 }

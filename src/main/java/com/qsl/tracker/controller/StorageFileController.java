@@ -1,5 +1,6 @@
 package com.qsl.tracker.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.qsl.tracker.common.ApiResponse;
 import com.qsl.tracker.domain.StorageFile;
 import com.qsl.tracker.dto.StorageFileResponse;
@@ -26,13 +27,15 @@ public class StorageFileController {
     private final StorageFileService storageFileService;
 
     @PostMapping("/upload")
+    @SaCheckPermission("file:write")
     public ApiResponse<StorageFileResponse> upload(@RequestParam("file") MultipartFile file) {
         return ApiResponse.ok(storageFileService.uploadImage(file));
     }
 
-    @GetMapping("/{id}/content")
-    public ResponseEntity<Resource> content(@PathVariable Long id) {
-        StorageFile file = storageFileService.getAvailableFile(id);
+    @GetMapping("/{fileKey}/content")
+    @SaCheckPermission("file:read")
+    public ResponseEntity<Resource> content(@PathVariable String fileKey) {
+        StorageFile file = storageFileService.getAccessibleFile(fileKey);
         Resource resource = new FileSystemResource(storageFileService.resolveFile(file));
         MediaType mediaType;
         try {

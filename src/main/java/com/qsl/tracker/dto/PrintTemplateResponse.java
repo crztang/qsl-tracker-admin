@@ -10,7 +10,7 @@ public class PrintTemplateResponse {
     private Long id;
     private String templateName;
     private String templateType;
-    private Long backgroundFileId;
+    private String backgroundFileKey;
     private JsonNode configJson;
     private Boolean enabled;
     private Boolean isDefault;

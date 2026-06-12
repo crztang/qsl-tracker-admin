@@ -4,7 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.qsl.tracker.common.ApiResponse;
 import com.qsl.tracker.dto.LoginRequest;
 import com.qsl.tracker.dto.LoginResponse;
-import com.qsl.tracker.service.AdminAuthService;
+import com.qsl.tracker.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,16 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AdminAuthService adminAuthService;
+    private final AuthService authService;
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        return ApiResponse.ok(adminAuthService.login(request, httpRequest));
+        return ApiResponse.ok(authService.login(request, httpRequest));
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
-        adminAuthService.logout();
+        authService.logout();
         return ApiResponse.ok();
     }
 

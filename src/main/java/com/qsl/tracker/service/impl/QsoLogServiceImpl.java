@@ -1,15 +1,18 @@
 package com.qsl.tracker.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qsl.tracker.common.BusinessException;
+import com.qsl.tracker.common.CurrentUserContext;
 import com.qsl.tracker.common.PageResponse;
 import com.qsl.tracker.domain.QslCard;
 import com.qsl.tracker.domain.QsoLog;
 import com.qsl.tracker.dto.QsoLogQuery;
 import com.qsl.tracker.dto.QsoLogRequest;
 import com.qsl.tracker.mapper.QsoLogMapper;
+import com.qsl.tracker.service.DataScopeService;
 import com.qsl.tracker.service.QslCardService;
 import com.qsl.tracker.service.QsoLogService;
 import java.util.Map;
@@ -26,14 +29,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> implements QsoLogService {
 
     private final QslCardService qslCardService;
+    private final CurrentUserContext currentUserContext;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QsoLog create(QsoLogRequest request) {
         QsoLog entity = new QsoLog();
         BeanUtils.copyProperties(request, entity);
+        entity.setUserId(currentUserContext.userId());
         entity.setCallSign(request.getCallSign().trim().toUpperCase());
-        entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset()).filter(v -> !v.isBlank()).orElse("+08:00"));
+        entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset())
+                .filter(v -> !v.isBlank()).orElse("+08:00"));
         save(entity);
         return entity;
     }
@@ -41,29 +48,60 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QsoLog update(Long id, QsoLogRequest request) {
-        QsoLog entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException("通联日志不存在");
-        }
+        QsoLog entity = getAccessible(id);
+        Long ownerId = entity.getUserId();
         BeanUtils.copyProperties(request, entity);
         entity.setId(id);
+        entity.setUserId(ownerId);
         entity.setCallSign(request.getCallSign().trim().toUpperCase());
-        entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset()).filter(v -> !v.isBlank()).orElse("+08:00"));
+        entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset())
+                .filter(v -> !v.isBlank()).orElse("+08:00"));
         updateById(entity);
         return entity;
     }
 
     @Override
     public PageResponse<QsoLog> page(QsoLogQuery query) {
-        Page<QsoLog> page = page(new Page<>(query.getPageNo(), query.getPageSize()), new LambdaQueryWrapper<QsoLog>()
-                .like(query.getCallSign() != null && !query.getCallSign().isBlank(), QsoLog::getCallSign, query.getCallSign())
+        LambdaQueryWrapper<QsoLog> wrapper = new LambdaQueryWrapper<QsoLog>()
+                .eq(!dataScopeService.canAccessAll(), QsoLog::getUserId, currentUserContext.userId())
+                .like(query.getCallSign() != null && !query.getCallSign().isBlank(),
+                        QsoLog::getCallSign, query.getCallSign())
                 .eq(query.getMode() != null && !query.getMode().isBlank(), QsoLog::getMode, query.getMode())
-                .eq(query.getCountry() != null && !query.getCountry().isBlank(), QsoLog::getCountry, query.getCountry())
+                .eq(query.getCountry() != null && !query.getCountry().isBlank(),
+                        QsoLog::getCountry, query.getCountry())
                 .ge(query.getStartTime() != null, QsoLog::getQsoTime, query.getStartTime())
                 .le(query.getEndTime() != null, QsoLog::getQsoTime, query.getEndTime())
-                .orderByDesc(QsoLog::getQsoTime));
+                .orderByDesc(QsoLog::getQsoTime);
+        Page<QsoLog> page = page(new Page<>(query.getPageNo(), query.getPageSize()), wrapper);
         fillQslCardRelations(page.getRecords());
         return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+    }
+
+    @Override
+    public QsoLog detail(Long id) {
+        return getAccessible(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(Long id) {
+        QsoLog entity = getAccessible(id);
+        qslCardService.update(new LambdaUpdateWrapper<QslCard>()
+                .eq(QslCard::getQsoLogId, entity.getId())
+                .eq(QslCard::getUserId, entity.getUserId())
+                .set(QslCard::getQsoLogId, null));
+        removeById(entity.getId());
+    }
+
+    private QsoLog getAccessible(Long id) {
+        QsoLog entity = getOne(new LambdaQueryWrapper<QsoLog>()
+                .eq(QsoLog::getId, id)
+                .eq(!dataScopeService.canAccessAll(), QsoLog::getUserId, currentUserContext.userId())
+                .last("limit 1"));
+        if (entity == null) {
+            throw new BusinessException("通联日志不存在");
+        }
+        return entity;
     }
 
     private void fillQslCardRelations(java.util.List<QsoLog> records) {
@@ -73,6 +111,7 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
         java.util.List<Long> qsoLogIds = records.stream().map(QsoLog::getId).toList();
         Map<Long, QslCard> cardByQsoLogId = qslCardService.list(new LambdaQueryWrapper<QslCard>()
                         .in(QslCard::getQsoLogId, qsoLogIds)
+                        .eq(!dataScopeService.canAccessAll(), QslCard::getUserId, currentUserContext.userId())
                         .orderByDesc(QslCard::getCreatedAt))
                 .stream()
                 .filter(card -> card.getQsoLogId() != null)

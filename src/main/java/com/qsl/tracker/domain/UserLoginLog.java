@@ -8,12 +8,12 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-@TableName("admin_login_log")
-public class AdminLoginLog {
+@TableName("user_login_log")
+public class UserLoginLog {
 
     @TableId
     private Long id;
-    private Long adminUserId;
+    private Long userId;
     private String username;
     private String loginIp;
     private String userAgent;

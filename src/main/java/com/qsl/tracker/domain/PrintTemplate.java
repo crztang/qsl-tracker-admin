@@ -11,7 +11,7 @@ public class PrintTemplate {
 
     @TableId
     private Long id;
-    private Long adminUserId;
+    private Long userId;
     private String templateName;
     private String templateType;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)

@@ -14,6 +14,7 @@ public class QsoLog {
 
     @TableId
     private Long id;
+    private Long userId;
     private String callSign;
     private LocalDateTime qsoTime;
     private String timezoneOffset;
