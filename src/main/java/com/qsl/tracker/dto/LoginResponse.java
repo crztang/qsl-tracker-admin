@@ -11,4 +11,5 @@ public class LoginResponse {
     private String tokenValue;
     private Long userId;
     private String username;
+    private boolean mustChangePassword;
 }

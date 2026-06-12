@@ -48,6 +48,14 @@ springdoc:
     path: /swagger-ui.html
 
 qsl:
+  captcha:
+    width: 130
+    height: 48
+    difficulty: 20
+    ttl-seconds: 120
+    rate-window-seconds: 60
+    generate-limit: 20
+    verify-limit: 30
   public-base-url: http://localhost:8080
   storage:
     local-root: E:/file/qsl-tracker

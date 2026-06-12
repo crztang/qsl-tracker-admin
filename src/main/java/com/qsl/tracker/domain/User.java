@@ -22,6 +22,7 @@ public class User {
     private String postalCode;
     private String passwordHash;
     private String passwordSalt;
+    private Boolean mustChangePassword;
     private Boolean enabled;
     private Integer failedLoginCount;
     private LocalDateTime lockedUntil;

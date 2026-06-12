@@ -17,9 +17,12 @@ public class RequestLogContext {
 
     private static final int MAX_BODY_BYTES = 8 * 1024;
     private static final Set<String> SENSITIVE_KEYS = Set.of(
-            "password", "token", "confirmtoken", "authorization", "secret", "pwd", "passwd");
+            "password", "confirmpassword", "newpassword", "currentpassword",
+            "captchacode", "token", "confirmtoken", "authorization", "secret", "pwd", "passwd");
     private static final List<String> BODY_PATTERNS = List.of(
             "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/change-password",
             "/api/qso-logs/**",
             "/api/qsl-cards/**",
             "/api/print-templates/**",

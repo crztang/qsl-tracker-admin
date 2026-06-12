@@ -24,6 +24,7 @@
         <druid.version>1.2.23</druid.version>
         <springdoc.version>2.6.0</springdoc.version>
         <crane4j.version>2.9.0</crane4j.version>
+        <easy-captcha.version>2.2.5</easy-captcha.version>
     </properties>
 
     <dependencies>
@@ -53,6 +54,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.pig4cloud.plugin</groupId>
+            <artifactId>captcha-spring-boot-starter</artifactId>
+            <version>${easy-captcha.version}</version>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
