@@ -1,0 +1,34 @@
+# Maven build output
+target/
+
+# Runtime files
+*.log
+logs/
+*.pid
+
+# Local configuration and environment files
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.yaml
+application-local.properties
+src/main/resources/application-local.yml
+src/main/resources/application-local.yaml
+src/main/resources/application-local.properties
+
+# IDE settings
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
