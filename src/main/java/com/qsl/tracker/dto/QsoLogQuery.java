@@ -10,7 +10,7 @@ public class QsoLogQuery {
     private long pageSize = 10;
     private String callSign;
     private String mode;
-    private String country;
+    private String qth;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 }

@@ -15,6 +15,7 @@ public class QsoLogRequest {
     @NotNull
     private LocalDateTime qsoTime;
     private String timezoneOffset = "+08:00";
+    @NotNull
     private BigDecimal frequencyMhz;
     private String bd;
     private String mode;
@@ -22,10 +23,8 @@ public class QsoLogRequest {
     private String rstSent;
     private String rstReceived;
     private String antenna;
-    private String country;
-    private String qthProvince;
-    private String qthCity;
-    private String qthDistrict;
-    private String qthDetail;
+    private String qth;
+    private String antennaHeight;
+    private String device;
     private String remark;
 }

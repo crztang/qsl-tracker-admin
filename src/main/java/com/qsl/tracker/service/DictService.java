@@ -1,0 +1,10 @@
+package com.qsl.tracker.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.qsl.tracker.domain.SysDictItem;
+import java.util.List;
+
+public interface DictService extends IService<SysDictItem> {
+
+    List<SysDictItem> listItems(String dictCode);
+}

@@ -18,6 +18,7 @@ import com.qsl.tracker.domain.QsoLog;
 import com.qsl.tracker.dto.PrintTemplateRequest;
 import com.qsl.tracker.mapper.PrintTemplateMapper;
 import com.qsl.tracker.mapper.QsoLogMapper;
+import com.qsl.tracker.service.DictService;
 import com.qsl.tracker.service.DataScopeService;
 import com.qsl.tracker.service.QslCardService;
 import com.qsl.tracker.service.StorageFileService;
@@ -46,7 +47,7 @@ class OwnershipScopeTest {
         when(mapper.selectOne(any(Wrapper.class), anyBoolean())).thenReturn(null);
 
         QsoLogServiceImpl service = new QsoLogServiceImpl(
-                mock(QslCardService.class), currentUser, dataScope);
+                mock(QslCardService.class), mock(DictService.class), currentUser, dataScope);
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
         assertThatThrownBy(() -> service.detail(99L)).isInstanceOf(BusinessException.class);
@@ -65,7 +66,7 @@ class OwnershipScopeTest {
         when(mapper.selectOne(any(Wrapper.class), anyBoolean())).thenReturn(null);
 
         QsoLogServiceImpl service = new QsoLogServiceImpl(
-                mock(QslCardService.class), currentUser, dataScope);
+                mock(QslCardService.class), mock(DictService.class), currentUser, dataScope);
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
 
         assertThatThrownBy(() -> service.detail(99L)).isInstanceOf(BusinessException.class);

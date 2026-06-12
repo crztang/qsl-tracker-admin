@@ -9,7 +9,8 @@ import lombok.Data;
 public class RegisterRequest {
 
     @NotBlank
-    @Size(max = 64)
+    @Size(min = 5, max = 64, message = "用户名长度不能少于5个字符")
+    @Pattern(regexp = "^[^\\u4e00-\\u9fff]+$", message = "用户名不能包含中文")
     private String username;
 
     @NotBlank

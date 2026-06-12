@@ -1,5 +1,6 @@
 server:
-  port: 10010
+  port: ${SERVER_PORT:10010}
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -11,9 +12,9 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.100.128:3306/qsl_tracker?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: "123456"
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:qsl_tracker}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:qsl_tracker}
+    password: ${MYSQL_PASSWORD:change-me-local-mysql-password}
     druid:
       initial-size: 2
       min-idle: 2
@@ -21,8 +22,9 @@ spring:
       validation-query: SELECT 1
   data:
     redis:
-      host: 192.168.100.128
-      port: 6379
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       database: 0
       connect-timeout: 3s
       timeout: 3s
@@ -56,14 +58,16 @@ qsl:
     rate-window-seconds: 60
     generate-limit: 20
     verify-limit: 30
-  public-base-url: http://localhost:8080
+  public-base-url: ${QSL_PUBLIC_BASE_URL:http://127.0.0.1:8080}
   storage:
-    local-root: E:/file/qsl-tracker
+    local-root: ${QSL_STORAGE_LOCAL_ROOT:E:/file/qsl-tracker}
   user:
     init-enabled: true
     username: admin
     password: admin123
 logging:
+  file:
+    path: ${LOGGING_FILE_PATH:logs}
   level:
     root: info
     com.qsl.tracker: debug

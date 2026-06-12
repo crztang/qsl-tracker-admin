@@ -27,13 +27,6 @@ QSL Tracker 后端单体服务，采用单模块 Spring Boot 工程。
 
 配置文件位于 `src/main/resources/application.yml`。
 
-当前连接信息：
-
-- 地址：`192.168.100.128:3306`
-- 数据库：`qsl_tracker`
-- 用户名：`root`
-- 密码：`123456`
-
 ## 默认管理员
 
 首次启动且 `sys_user` 表为空时，会自动创建默认超级管理员，并绑定内置
@@ -88,18 +81,3 @@ mvn spring-boot:run
 接口文档地址：
 
 - `http://localhost:8080/swagger-ui.html`
-
-## 主要接口
-
-- `POST /api/auth/login`：后台登录
-- `POST /api/auth/logout`：退出登录
-- `GET /api/qso-logs`：通联日志分页
-- `POST /api/qso-logs`：新增通联日志
-- `PUT /api/qso-logs/{id}`：修改通联日志
-- `DELETE /api/qso-logs/{id}`：删除通联日志
-- `GET /api/qsl-cards`：QSL 卡片分页
-- `POST /api/qsl-cards`：新增 QSL 卡片
-- `PUT /api/qsl-cards/{id}`：修改 QSL 卡片
-- `DELETE /api/qsl-cards/{id}`：删除 QSL 卡片
-- `GET /api/public/qsl-cards/{trackingNo}`：公开查询 QSL 卡片确认信息
-- `POST /api/public/qsl-cards/{trackingNo}/confirm`：公开确认收件

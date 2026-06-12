@@ -9,14 +9,17 @@ import com.qsl.tracker.common.CurrentUserContext;
 import com.qsl.tracker.common.PageResponse;
 import com.qsl.tracker.domain.QslCard;
 import com.qsl.tracker.domain.QsoLog;
+import com.qsl.tracker.domain.SysDictItem;
 import com.qsl.tracker.dto.QsoLogQuery;
 import com.qsl.tracker.dto.QsoLogRequest;
 import com.qsl.tracker.mapper.QsoLogMapper;
+import com.qsl.tracker.service.DictService;
 import com.qsl.tracker.service.DataScopeService;
 import com.qsl.tracker.service.QslCardService;
 import com.qsl.tracker.service.QsoLogService;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> implements QsoLogService {
 
+    private static final String MODE_DICT_CODE = "QSO_MODE";
+
     private final QslCardService qslCardService;
+    private final DictService dictService;
     private final CurrentUserContext currentUserContext;
     private final DataScopeService dataScopeService;
 
@@ -41,6 +47,8 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
         entity.setCallSign(request.getCallSign().trim().toUpperCase());
         entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset())
                 .filter(v -> !v.isBlank()).orElse("+08:00"));
+        entity.setMode(normalizeMode(request.getMode()));
+        validateMode(entity.getMode());
         save(entity);
         return entity;
     }
@@ -56,6 +64,8 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
         entity.setCallSign(request.getCallSign().trim().toUpperCase());
         entity.setTimezoneOffset(Optional.ofNullable(request.getTimezoneOffset())
                 .filter(v -> !v.isBlank()).orElse("+08:00"));
+        entity.setMode(normalizeMode(request.getMode()));
+        validateMode(entity.getMode());
         updateById(entity);
         return entity;
     }
@@ -67,8 +77,8 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
                 .like(query.getCallSign() != null && !query.getCallSign().isBlank(),
                         QsoLog::getCallSign, query.getCallSign())
                 .eq(query.getMode() != null && !query.getMode().isBlank(), QsoLog::getMode, query.getMode())
-                .eq(query.getCountry() != null && !query.getCountry().isBlank(),
-                        QsoLog::getCountry, query.getCountry())
+                .like(query.getQth() != null && !query.getQth().isBlank(),
+                        QsoLog::getQth, query.getQth())
                 .ge(query.getStartTime() != null, QsoLog::getQsoTime, query.getStartTime())
                 .le(query.getEndTime() != null, QsoLog::getQsoTime, query.getEndTime())
                 .orderByDesc(QsoLog::getQsoTime);
@@ -121,5 +131,25 @@ public class QsoLogServiceImpl extends ServiceImpl<QsoLogMapper, QsoLog> impleme
             record.setQslCardExists(card != null);
             record.setQslCardId(card == null ? null : card.getId());
         });
+    }
+
+    private String normalizeMode(String mode) {
+        return Optional.ofNullable(mode)
+                .map(String::trim)
+                .filter(v -> !v.isBlank())
+                .map(String::toUpperCase)
+                .orElse(null);
+    }
+
+    private void validateMode(String mode) {
+        if (mode == null) {
+            return;
+        }
+        Set<String> allowedModes = dictService.listItems(MODE_DICT_CODE).stream()
+                .map(SysDictItem::getItemCode)
+                .collect(Collectors.toSet());
+        if (!allowedModes.contains(mode)) {
+            throw new BusinessException("模式不在字典配置中");
+        }
     }
 }
