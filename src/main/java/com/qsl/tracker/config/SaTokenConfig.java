@@ -1,11 +1,14 @@
 package com.qsl.tracker.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
+import cn.dev33.satoken.jwt.StpLogicJwtForSimple;
+import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import com.qsl.tracker.common.BusinessException;
 import com.qsl.tracker.domain.User;
 import com.qsl.tracker.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -16,6 +19,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SaTokenConfig implements WebMvcConfigurer {
 
     private final UserMapper userMapper;
+
+    @Bean
+    public StpLogic stpLogicJwt() {
+        return new StpLogicJwtForSimple();
+    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

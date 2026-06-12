@@ -19,6 +19,13 @@ spring:
       min-idle: 2
       max-active: 10
       validation-query: SELECT 1
+  data:
+    redis:
+      host: 192.168.100.128
+      port: 6379
+      database: 0
+      connect-timeout: 3s
+      timeout: 3s
 
 mybatis-plus:
   configuration:
@@ -31,9 +38,10 @@ sa-token:
   token-prefix: Bearer
   timeout: 259200
   active-timeout: -1
-  is-concurrent: true
-  is-share: true
+  is-concurrent: false
+  is-share: false
   is-log: false
+  jwt-secret-key: ${SA_TOKEN_JWT_SECRET_KEY:qsl-tracker-dev-jwt-secret-key-change-before-production}
 
 springdoc:
   swagger-ui:
