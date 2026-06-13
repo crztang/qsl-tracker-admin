@@ -15,4 +15,5 @@ public class UserProfileResponse {
     private String phone;
     private String recipient;
     private String postalCode;
+    private QslShareSummaryResponse qslShare;
 }

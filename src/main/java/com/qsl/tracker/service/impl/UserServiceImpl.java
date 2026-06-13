@@ -4,17 +4,23 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qsl.tracker.common.BusinessException;
 import com.qsl.tracker.domain.User;
+import com.qsl.tracker.dto.QslShareSummaryResponse;
 import com.qsl.tracker.dto.UserProfileRequest;
 import com.qsl.tracker.dto.UserProfileResponse;
 import com.qsl.tracker.mapper.UserMapper;
+import com.qsl.tracker.service.QslShareService;
 import com.qsl.tracker.service.UserService;
 import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    private final QslShareService qslShareService;
 
     @Override
     public UserProfileResponse currentProfile() {
@@ -35,6 +41,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return toResponse(user);
     }
 
+    @Override
+    public QslShareSummaryResponse currentQslShare() {
+        return qslShareService.current();
+    }
+
     private User currentUser() {
         User user = getById(StpUtil.getLoginIdAsLong());
         if (user == null) {
@@ -50,6 +61,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (previousLoginAt instanceof LocalDateTime value) {
             response.setLastLoginAt(value);
         }
+        response.setQslShare(qslShareService.current());
         return response;
     }
 

@@ -21,8 +21,8 @@ class SaTokenJwtConfigTest {
     void devConfigUsesRedisAndSingleLogin() {
         Properties properties = load("application-dev.yml");
 
-        assertThat(properties.getProperty("spring.data.redis.host")).isEqualTo("192.168.100.128");
-        assertThat(properties.getProperty("spring.data.redis.port")).isEqualTo("6379");
+        assertThat(properties.getProperty("spring.data.redis.host")).isEqualTo("${REDIS_HOST:127.0.0.1}");
+        assertThat(properties.getProperty("spring.data.redis.port")).isEqualTo("${REDIS_PORT:6379}");
         assertThat(properties.getProperty("sa-token.is-concurrent")).isEqualTo("false");
         assertThat(properties.getProperty("sa-token.is-share")).isEqualTo("false");
         assertThat(properties.getProperty("sa-token.timeout")).isEqualTo("259200");
@@ -34,7 +34,7 @@ class SaTokenJwtConfigTest {
     void prodConfigRequiresExternalRedisAndJwtSecret() {
         Properties properties = load("application-prod.yml");
 
-        assertThat(properties.getProperty("spring.data.redis.host")).isEqualTo("${REDIS_HOST}");
+        assertThat(properties.getProperty("spring.data.redis.host")).isEqualTo("${REDIS_HOST:redis}");
         assertThat(properties.getProperty("spring.data.redis.password")).isEqualTo("${REDIS_PASSWORD:}");
         assertThat(properties.getProperty("sa-token.jwt-secret-key")).isEqualTo("${SA_TOKEN_JWT_SECRET_KEY}");
     }

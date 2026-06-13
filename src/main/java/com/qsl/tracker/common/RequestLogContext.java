@@ -38,8 +38,12 @@ public class RequestLogContext {
 
     public String describe(HttpServletRequest request) {
         StringBuilder builder = new StringBuilder();
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/public/embed/")) {
+            uri = "/public/embed/**";
+        }
         builder.append("method=").append(request.getMethod())
-                .append(", uri=").append(request.getRequestURI())
+                .append(", uri=").append(uri)
                 .append(", query=").append(StringUtils.hasText(request.getQueryString())
                         ? request.getQueryString() : "-")
                 .append(", ip=").append(WebUtil.clientIp(request));
