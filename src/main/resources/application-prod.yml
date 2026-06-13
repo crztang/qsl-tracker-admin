@@ -58,7 +58,7 @@ qsl:
     rate-window-seconds: ${CAPTCHA_RATE_WINDOW_SECONDS:60}
     generate-limit: ${CAPTCHA_GENERATE_LIMIT:20}
     verify-limit: ${CAPTCHA_VERIFY_LIMIT:30}
-  public-base-url: ${QSL_PUBLIC_BASE_URL:http://localhost}
+  public-base-url: ${QSL_PUBLIC_BASE_URL:https://localhost}
   storage:
     local-root: ${QSL_STORAGE_LOCAL_ROOT:/data/qsl-tracker/files}
   user:

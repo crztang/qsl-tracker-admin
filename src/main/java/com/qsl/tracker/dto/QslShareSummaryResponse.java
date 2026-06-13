@@ -14,4 +14,7 @@ public class QslShareSummaryResponse {
     private LocalDateTime updatedAt;
     private boolean expired;
     private boolean hasToken;
+    private String token;
+    private String embedUrl;
+    private String iframeCode;
 }

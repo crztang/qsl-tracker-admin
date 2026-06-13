@@ -15,6 +15,7 @@ public class QslShare {
     private Long id;
     private Long userId;
     private String shareTokenHash;
+    private String shareTokenCiphertext;
     private LocalDateTime expiresAt;
     private Integer recordLimit;
     private Boolean enabled;

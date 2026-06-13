@@ -4,15 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qsl.tracker.common.BusinessException;
 import com.qsl.tracker.common.CurrentUserContext;
+import com.qsl.tracker.common.ShareTokenCrypto;
 import com.qsl.tracker.common.ShareTokenUtil;
+import com.qsl.tracker.domain.QslShare;
 import com.qsl.tracker.domain.QsoLog;
 import com.qsl.tracker.domain.User;
-import com.qsl.tracker.domain.QslShare;
 import com.qsl.tracker.dto.QslShareIssueResponse;
 import com.qsl.tracker.dto.QslShareRequest;
 import com.qsl.tracker.dto.QslShareSummaryResponse;
-import com.qsl.tracker.mapper.QsoLogMapper;
 import com.qsl.tracker.mapper.QslShareMapper;
+import com.qsl.tracker.mapper.QsoLogMapper;
 import com.qsl.tracker.mapper.UserMapper;
 import com.qsl.tracker.service.QslShareService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +28,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
@@ -40,57 +40,76 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
     private final UserMapper userMapper;
     private final QsoLogMapper qsoLogMapper;
 
+    @Value("${qsl.public-base-url}")
+    private String publicBaseUrl;
+
+    @Value("${sa-token.jwt-secret-key}")
+    private String shareTokenSecret;
+
     @Override
     public QslShareSummaryResponse current() {
-        return toSummary(loadCurrent());
+        QslShare entity = loadCurrent();
+        QslShareSummaryResponse response = toSummary(entity);
+        hydrateShareLinks(entity, response);
+        return response;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QslShareIssueResponse generate(QslShareRequest request, HttpServletRequest httpRequest) {
-        QslShare entity = upsertCurrent(request, true);
+        QslShare entity = upsertCurrent(request);
         String token = ShareTokenUtil.newToken();
         entity.setShareTokenHash(ShareTokenUtil.sha256Hex(token));
+        entity.setShareTokenCiphertext(ShareTokenCrypto.encrypt(token, shareTokenSecret));
         saveOrUpdate(entity);
-        return toIssueResponse(entity, token, httpRequest);
+        return toIssueResponse(entity, token);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QslShareSummaryResponse updateSettings(QslShareRequest request) {
-        QslShare entity = upsertCurrent(request, false);
+        QslShare entity = upsertCurrent(request);
         saveOrUpdate(entity);
-        return toSummary(entity);
+        QslShareSummaryResponse response = toSummary(entity);
+        hydrateShareLinks(entity, response);
+        return response;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QslShareSummaryResponse revoke() {
         QslShare entity = loadOrCreateCurrent();
-        entity.setEnabled(Boolean.FALSE);
-        saveOrUpdate(entity);
-        return toSummary(entity);
+        if (entity.getId() != null) {
+            removeById(entity.getId());
+        }
+        QslShareSummaryResponse response = new QslShareSummaryResponse();
+        response.setEnabled(Boolean.FALSE);
+        response.setRecordLimit(10);
+        response.setExpiryPreset("permanent");
+        response.setExpired(false);
+        response.setHasToken(false);
+        response.setToken(null);
+        response.setEmbedUrl(null);
+        response.setIframeCode(null);
+        return response;
     }
 
     @Override
     public String renderHtml(String token, HttpServletRequest request) {
         if (token == null || token.isBlank()) {
-            throw new BusinessException(404, "嵌入链接不存在");
+            throw new BusinessException(404, "页面不存在");
         }
         String tokenHash = ShareTokenUtil.sha256Hex(token);
         QslShare share = getOne(new LambdaQueryWrapper<QslShare>()
                 .eq(QslShare::getShareTokenHash, tokenHash)
                 .eq(QslShare::getEnabled, Boolean.TRUE)
                 .last("limit 1"));
-        if (share == null) {
-            throw new BusinessException(404, "嵌入链接不存在或已失效");
-        }
-        if (share.getExpiresAt() != null && share.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BusinessException(404, "嵌入链接已过期");
+        if (share == null || isExpired(share.getExpiresAt())) {
+            throw new BusinessException(404, "页面不存在");
         }
         User user = userMapper.selectById(share.getUserId());
         if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
-            throw new BusinessException(404, "嵌入链接不存在或已失效");
+            throw new BusinessException(404, "页面不存在");
         }
         List<QsoLog> logs = qsoLogMapper.selectList(new LambdaQueryWrapper<QsoLog>()
                 .eq(QsoLog::getUserId, share.getUserId())
@@ -99,11 +118,11 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         return buildHtml(user, share, logs);
     }
 
-    private QslShare upsertCurrent(QslShareRequest request, boolean forceEnabled) {
+    private QslShare upsertCurrent(QslShareRequest request) {
         QslShare entity = loadOrCreateCurrent();
         entity.setRecordLimit(limitValue(request.getRecordLimit()));
         entity.setExpiresAt(resolveExpiresAt(request.getExpiryPreset()));
-        entity.setEnabled(forceEnabled || Boolean.TRUE.equals(request.getEnabled()));
+        entity.setEnabled(Boolean.TRUE);
         return entity;
     }
 
@@ -131,7 +150,7 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         QslShare empty = new QslShare();
         empty.setUserId(currentUserContext.userId());
         empty.setRecordLimit(10);
-        empty.setEnabled(Boolean.FALSE);
+        empty.setEnabled(Boolean.TRUE);
         return empty;
     }
 
@@ -143,18 +162,31 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
         response.setExpiryPreset(resolveExpiryPreset(entity.getExpiresAt()));
-        response.setExpired(entity.getExpiresAt() != null && entity.getExpiresAt().isBefore(LocalDateTime.now()));
+        response.setExpired(isExpired(entity.getExpiresAt()));
         response.setHasToken(hasToken(entity));
         return response;
     }
 
-    private QslShareIssueResponse toIssueResponse(QslShare entity, String token, HttpServletRequest httpRequest) {
+    private QslShareIssueResponse toIssueResponse(QslShare entity, String token) {
         QslShareIssueResponse response = new QslShareIssueResponse();
         copySummary(entity, response);
         response.setToken(token);
-        response.setEmbedUrl(buildEmbedUrl(token, httpRequest));
-        response.setIframeCode(buildIframeCode(response.getEmbedUrl(), response.getRecordLimit()));
+        response.setEmbedUrl(buildEmbedUrl(token));
+        response.setIframeCode(buildIframeCode(response.getEmbedUrl()));
         return response;
+    }
+
+    private void hydrateShareLinks(QslShare entity, QslShareSummaryResponse response) {
+        String token = resolveToken(entity);
+        if (token == null || token.isBlank()) {
+            response.setToken(null);
+            response.setEmbedUrl(null);
+            response.setIframeCode(null);
+            return;
+        }
+        response.setToken(token);
+        response.setEmbedUrl(buildEmbedUrl(token));
+        response.setIframeCode(buildIframeCode(response.getEmbedUrl()));
     }
 
     private void copySummary(QslShare entity, QslShareSummaryResponse response) {
@@ -164,16 +196,15 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
         response.setExpiryPreset(resolveExpiryPreset(entity.getExpiresAt()));
-        response.setExpired(entity.getExpiresAt() != null && entity.getExpiresAt().isBefore(LocalDateTime.now()));
+        response.setExpired(isExpired(entity.getExpiresAt()));
         response.setHasToken(hasToken(entity));
     }
 
-    private String buildEmbedUrl(String token, HttpServletRequest httpRequest) {
-        String baseUrl = currentPublicBaseUrl(httpRequest);
-        return baseUrl + "/public/embed/" + token;
+    private String buildEmbedUrl(String token) {
+        return normalizePublicBaseUrl() + "/public/embed/" + token;
     }
 
-    private String buildIframeCode(String embedUrl, Integer recordLimit) {
+    private String buildIframeCode(String embedUrl) {
         int height = 560;
         return "<iframe src=\"" + HtmlUtils.htmlEscape(embedUrl) + "\""
                 + " width=\"100%\" height=\"" + height + "\""
@@ -184,7 +215,7 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
 
     private String buildHtml(User user, QslShare share, List<QsoLog> logs) {
         StringBuilder html = new StringBuilder(4096);
-        String title = displayName(user) + " 最近通联记录";
+        String title = displayTitle(user);
         html.append("<!doctype html><html lang=\"zh-CN\"><head>")
                 .append("<meta charset=\"utf-8\">")
                 .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
@@ -204,14 +235,12 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
                 .append("th,td{padding:12px 14px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:top;font-size:13px;line-height:1.4;white-space:nowrap;}")
                 .append("td:last-child,th:last-child{white-space:normal;}")
                 .append(".empty{padding:28px 16px;color:#6b7280;text-align:center;}")
-                .append(".footer{display:flex;justify-content:space-between;gap:12px;padding:12px 18px 16px;color:#6b7280;font-size:12px;}")
-                .append("@media (max-width:640px){.embed-header,.footer{flex-direction:column;align-items:flex-start}.meta{text-align:left}th,td{font-size:12px;padding:10px 12px;}}")
+                .append("@media (max-width:640px){.embed-header{flex-direction:column;align-items:flex-start}.meta{text-align:left}th,td{font-size:12px;padding:10px 12px;}}")
                 .append("</style></head><body>")
                 .append("<section class=\"embed-card\">")
                 .append("<header class=\"embed-header\">")
                 .append("<div><h1>").append(escape(title)).append("</h1>")
                 .append("<div class=\"meta\">").append(escape("更新于 " + LocalDateTime.now().format(DISPLAY_TIME))).append("</div></div>")
-                .append("<div class=\"meta\">").append(escape("仅供 iframe 嵌入")).append("</div>")
                 .append("</header>")
                 .append("<div class=\"table-wrap\"><table><thead><tr>")
                 .append("<th>时间</th><th>呼号</th><th>频率 / 波段</th><th>模式</th><th>RST</th><th>QTH</th>")
@@ -233,26 +262,16 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         }
 
         html.append("</tbody></table></div>")
-                .append("<footer class=\"footer\">")
-                .append("<span>").append(escape("有效期：" + expiryText(share))).append("</span>")
-                .append("<span>").append(escape("仅展示最近 " + limitValue(share.getRecordLimit()) + " 条记录")).append("</span>")
-                .append("</footer>")
                 .append("</section></body></html>");
         return html.toString();
     }
 
-    private String expiryText(QslShare share) {
-        if (share.getExpiresAt() == null) {
-            return "永久有效";
+    private String displayTitle(User user) {
+        String callSign = user.getCallSign();
+        if (callSign != null && !callSign.isBlank()) {
+            return callSign.trim().toUpperCase(Locale.ROOT) + " 最近通联记录";
         }
-        return share.getExpiresAt().format(DISPLAY_TIME);
-    }
-
-    private String displayName(User user) {
-        if (user.getCallSign() != null && !user.getCallSign().isBlank()) {
-            return user.getCallSign().trim().toUpperCase(Locale.ROOT);
-        }
-        return user.getUsername();
+        return "最近通联记录";
     }
 
     private String displayTime(LocalDateTime value) {
@@ -288,7 +307,22 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
     }
 
     private boolean hasToken(QslShare entity) {
-        return entity.getShareTokenHash() != null && !entity.getShareTokenHash().isBlank();
+        return entity.getShareTokenCiphertext() != null && !entity.getShareTokenCiphertext().isBlank();
+    }
+
+    private String resolveToken(QslShare entity) {
+        if (!hasToken(entity)) {
+            return null;
+        }
+        try {
+            return ShareTokenCrypto.decrypt(entity.getShareTokenCiphertext(), shareTokenSecret);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private boolean isExpired(LocalDateTime expiresAt) {
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
     }
 
     private int limitValue(Integer value) {
@@ -324,14 +358,11 @@ public class QslShareServiceImpl extends ServiceImpl<QslShareMapper, QslShare>
         return "custom";
     }
 
-    private String currentPublicBaseUrl(HttpServletRequest httpRequest) {
-        if (httpRequest == null) {
-            return "";
+    private String normalizePublicBaseUrl() {
+        String baseUrl = publicBaseUrl == null ? "" : publicBaseUrl.trim();
+        if (baseUrl.endsWith("/")) {
+            return baseUrl.substring(0, baseUrl.length() - 1);
         }
-        return ServletUriComponentsBuilder.fromRequest(httpRequest)
-                .replacePath("")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
+        return baseUrl;
     }
 }
