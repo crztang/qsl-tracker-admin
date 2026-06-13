@@ -41,6 +41,15 @@ class RegisterRequestValidationTest {
         assertThat(validator.validateProperty(request, "password")).isNotEmpty();
     }
 
+    @Test
+    void passwordShouldRejectPureDigits() {
+        RegisterRequest request = validRequest();
+        request.setPassword("123456");
+        request.setConfirmPassword("123456");
+
+        assertThat(validator.validateProperty(request, "password")).isNotEmpty();
+    }
+
     private RegisterRequest validRequest() {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("abcde");

@@ -15,7 +15,7 @@ public class RegisterRequest {
 
     @NotBlank
     @Size(min = 6, max = 64)
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$")
+    @Pattern(regexp = "^(?!\\d+$).+$", message = "密码不能为纯数字")
     private String password;
 
     @NotBlank
