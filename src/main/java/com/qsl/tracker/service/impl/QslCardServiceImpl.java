@@ -144,7 +144,7 @@ public class QslCardServiceImpl extends ServiceImpl<QslCardMapper, QslCard> impl
             saveConfirmLog(card, ip, userAgent, false, "确认令牌错误");
             throw new BusinessException("确认令牌错误");
         }
-        card.setStatus(CardStatus.CONFIRMED.getValue());
+        card.setStatus(CardStatus.CONFIRMED.getCode());
         card.setConfirmedAt(LocalDateTime.now());
         card.setConfirmedIp(ip);
         card.setConfirmedUserAgent(userAgent);
